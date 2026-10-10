@@ -1,0 +1,63 @@
+scan:
+  fields:
+    device_id:
+      selector:
+        device:
+          integration: brother_scanner
+    target:
+      required: true
+      default: file
+      selector:
+        select:
+          options:
+            - file
+            - ocr
+            - email
+            - image
+    resolution:
+      selector:
+        number:
+          min: 50
+          max: 9600
+          step: 50
+          unit_of_measurement: dpi
+          mode: box
+    mode:
+      example: "True Gray"
+      selector:
+        text:
+    source:
+      example: "FlatBed"
+      selector:
+        text:
+    wait:
+      default: false
+      selector:
+        boolean:
+
+scan_rear:
+  fields:
+    device_id:
+      selector:
+        device:
+          integration: brother_scanner
+    job:
+      example: "2026-10-10-12-34-56"
+      selector:
+        text:
+
+download_last_scan:
+  fields:
+    device_id:
+      selector:
+        device:
+          integration: brother_scanner
+    path:
+      required: true
+      example: "/media/scans/"
+      selector:
+        text:
+    ocr:
+      default: false
+      selector:
+        boolean:

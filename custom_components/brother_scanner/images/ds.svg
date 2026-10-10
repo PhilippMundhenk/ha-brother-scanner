@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 240" width="320" height="240">
+  <title>Portable sheet-fed scanner</title>
+  <defs>
+    <linearGradient id="body" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#f4f5f7"/>
+      <stop offset="1" stop-color="#cfd3d8"/>
+    </linearGradient>
+  </defs>
+  <ellipse cx="160" cy="176" rx="130" ry="8" fill="#000" opacity="0.12"/>
+  <rect x="40" y="120" width="240" height="40" rx="12" fill="url(#body)" stroke="#9ca3af" stroke-width="2"/>
+  <rect x="56" y="134" width="208" height="6" rx="3" fill="#111827" opacity="0.8"/>
+  <rect x="100" y="60" width="120" height="64" fill="#f9fafb" stroke="#d1d5db"/>
+  <path d="M110 70 h100 M110 80 h80 M110 90 h90 M110 100 h60 M110 110 h84" stroke="#9ca3af" stroke-width="2"/>
+  <circle cx="262" cy="140" r="4" fill="#22c55e"/>
+</svg>

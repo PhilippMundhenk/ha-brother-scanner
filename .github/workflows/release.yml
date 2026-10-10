@@ -1,0 +1,29 @@
+name: Release
+
+# Publishing a GitHub release (tag vX.Y.Z) attaches a zip of the integration,
+# which HACS uses when "zip_release" is set. Here HACS downloads the
+# repository at the release tag directly, so the zip is a convenience for
+# manual installs. The job also checks that manifest.json carries the tag's
+# version, which HACS shows to users.
+
+on:
+  release:
+    types: [published]
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check manifest version matches the tag
+        run: |
+          tag="${GITHUB_REF_NAME#v}"
+          version=$(python3 -c "import json;print(json.load(open('custom_components/brother_scanner/manifest.json'))['version'])")
+          test "$tag" = "$version" || { echo "manifest.json version $version does not match tag $tag"; exit 1; }
+      - name: Zip the integration
+        run: cd custom_components/brother_scanner && zip -r ../../brother_scanner.zip .
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: brother_scanner.zip

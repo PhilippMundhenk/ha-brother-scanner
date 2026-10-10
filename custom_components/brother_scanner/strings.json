@@ -1,0 +1,123 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Connect to the scanner container",
+        "description": "Host and port of the BrotherScannerDocker web interface. The API token is only needed when the container runs with API_TOKEN.",
+        "data": {
+          "host": "Host",
+          "port": "Port",
+          "token": "API token",
+          "ssl": "Use HTTPS"
+        }
+      },
+      "reauth_confirm": {
+        "title": "Token rejected",
+        "description": "The container refused the API token. Enter the current API_TOKEN of the container.",
+        "data": {
+          "token": "API token"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "The container did not answer. Check host, port and that WEBSERVER=true is set.",
+      "invalid_auth": "The container rejected the API token.",
+      "unsupported_api": "The container speaks a newer API than this integration. Update the integration.",
+      "unknown": "Unexpected error, see the log."
+    },
+    "abort": {
+      "already_configured": "This container is already configured.",
+      "reauth_successful": "The token was updated."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Scanner options",
+        "data": {
+          "scan_interval": "Poll interval (seconds)",
+          "image_url": "Picture URL for the card (empty: generic illustration by model)",
+          "hide_image": "Hide the picture on the card"
+        }
+      }
+    }
+  },
+  "entity": {
+    "sensor": {
+      "scanner_state": {
+        "name": "State",
+        "state": {
+          "idle": "Idle",
+          "scanning": "Scanning",
+          "waiting_for_rear": "Waiting for rear pages",
+          "converting": "Converting",
+          "ocr": "OCR running",
+          "unreachable": "Scanner unreachable"
+        }
+      },
+      "last_scan": { "name": "Last scan" },
+      "ocr_queue": { "name": "OCR queue" },
+      "last_job_state": {
+        "name": "Last job",
+        "state": {
+          "queued": "Queued",
+          "scanning": "Scanning",
+          "waiting_for_rear": "Waiting for rear pages",
+          "scanning_rear": "Scanning rear pages",
+          "converting": "Converting",
+          "done": "Done",
+          "failed": "Failed",
+          "unknown": "Unknown"
+        }
+      },
+      "last_error": { "name": "Last error" },
+      "version": { "name": "Container version" }
+    },
+    "binary_sensor": {
+      "scanning": { "name": "Scanning" },
+      "waiting_for_rear_pages": { "name": "Waiting for rear pages" },
+      "ocr_running": { "name": "OCR running" },
+      "reachable": { "name": "Scanner reachable" },
+      "problem": { "name": "Problem" }
+    },
+    "button": {
+      "scan_rear": { "name": "Scan rear pages" }
+    },
+    "select": {
+      "resolution": { "name": "Resolution", "state": { "default": "Container default" } },
+      "mode": { "name": "Mode", "state": { "default": "Container default" } },
+      "source": { "name": "Source", "state": { "default": "Container default" } }
+    }
+  },
+  "services": {
+    "scan": {
+      "name": "Scan",
+      "description": "Starts a scan on the container and returns the job id.",
+      "fields": {
+        "device_id": { "name": "Scanner", "description": "Which scanner, when more than one is configured." },
+        "target": { "name": "Action", "description": "file, ocr, email (rear pages) or image." },
+        "resolution": { "name": "Resolution", "description": "dpi, one of the values the device offers." },
+        "mode": { "name": "Mode", "description": "Scan mode as the device lists it, e.g. True Gray." },
+        "source": { "name": "Source", "description": "Paper source as the device lists it, e.g. FlatBed." },
+        "wait": { "name": "Wait", "description": "Wait for the scan script to finish before returning." }
+      }
+    },
+    "scan_rear": {
+      "name": "Scan rear pages",
+      "description": "Scans the rear pages of the job that waits for them.",
+      "fields": {
+        "device_id": { "name": "Scanner", "description": "Which scanner, when more than one is configured." },
+        "job": { "name": "Job", "description": "Job id; empty for the newest waiting job." }
+      }
+    },
+    "download_last_scan": {
+      "name": "Download last scan",
+      "description": "Saves the newest PDF to a path inside allowlist_external_dirs.",
+      "fields": {
+        "device_id": { "name": "Scanner", "description": "Which scanner, when more than one is configured." },
+        "path": { "name": "Path", "description": "Target file, or a directory (trailing slash) to keep the file name." },
+        "ocr": { "name": "OCR copy", "description": "Prefer the OCR copy of the latest job when it exists." }
+      }
+    }
+  }
+}

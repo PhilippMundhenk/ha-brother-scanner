@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 240" width="320" height="240">
+  <title>Scanner</title>
+  <defs>
+    <linearGradient id="body" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#f4f5f7"/>
+      <stop offset="1" stop-color="#cfd3d8"/>
+    </linearGradient>
+  </defs>
+  <ellipse cx="160" cy="198" rx="130" ry="9" fill="#000" opacity="0.12"/>
+  <rect x="40" y="130" width="240" height="56" rx="10" fill="url(#body)" stroke="#9ca3af" stroke-width="2"/>
+  <path d="M60 130 L80 70 L240 70 L260 130 Z" fill="#374151"/>
+  <rect x="96" y="80" width="128" height="40" fill="#9ca3af" opacity="0.5"/>
+  <path d="M96 100 h128" stroke="#38bdf8" stroke-width="3"/>
+  <rect x="60" y="150" width="200" height="8" rx="3" fill="#111827" opacity="0.8"/>
+  <circle cx="262" cy="156" r="5" fill="#22c55e"/>
+</svg>
