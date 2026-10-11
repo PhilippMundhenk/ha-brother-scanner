@@ -99,7 +99,12 @@ class BrotherScannerConfigFlow(ConfigFlow, domain=DOMAIN):
 
     async def async_step_user(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
         errors: dict[str, str] = {}
-        placeholders: dict[str, str] = {"detail": ""}
+        placeholders: dict[str, str] = {
+            "detail": "",
+            # hassfest forbids URLs inside translation strings
+            "example_https": "https://scanner.example.org",
+            "example_http": "http://192.168.1.5:8080",
+        }
         if user_input is not None:
             user_input = normalize_input(user_input)
             await self.async_set_unique_id(f"{user_input[CONF_HOST]}:{user_input[CONF_PORT]}")

@@ -3,7 +3,7 @@
     "step": {
       "user": {
         "title": "Connect to the scanner container",
-        "description": "Address of the BrotherScannerDocker web interface. Host may also be a full URL such as https://scanner.example.org or http://192.168.1.5:8080. Leave the port empty for 80, or 443 with HTTPS. The API token is only needed when the container runs with API_TOKEN.{detail}",
+        "description": "Address of the BrotherScannerDocker web interface. Host may also be a full URL such as {example_https} or {example_http}. Leave the port empty for 80, or 443 with HTTPS. The API token is only needed when the container runs with API_TOKEN.",
         "data": {
           "host": "Host",
           "port": "Port (empty: 80, or 443 with HTTPS)",
