@@ -20,11 +20,11 @@
       }
     },
     "error": {
-      "cannot_connect": "The container did not answer: {detail}. Check host, port, HTTPS and that WEBSERVER=true is set.",
+      "cannot_connect": "Could not connect to the scanner container: {detail}. Check host, port and HTTPS, and that the container runs with WEBSERVER=true.",
       "invalid_auth": "The container rejected the API token.",
       "unsupported_api": "The container speaks a newer API than this integration. Update the integration.",
-      "unknown": "Unexpected error: {detail}. See the log for details.",
-      "api_error": "The address answered, but not with the container's API: {detail}. The web interface must be at the root of this address; check host, port and HTTPS (a reverse proxy answers 404 page not found when the name or port is wrong)."
+      "unknown": "Could not set up the scanner container: {detail}. See the log for details.",
+      "api_error": "Could not connect to the scanner container's API: {detail}. Check host, port and HTTPS; the web interface must be at the root of the address (a reverse proxy answers \"404 page not found\" when the name or port does not reach the container)."
     },
     "abort": {
       "already_configured": "This container is already configured.",
