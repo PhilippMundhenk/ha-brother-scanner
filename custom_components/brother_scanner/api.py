@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import json
 from typing import Any
 from urllib.parse import quote
 
@@ -55,9 +56,16 @@ class ScannerApi:
                 if res.status >= 400:
                     message = await _error_message(res)
                     raise ScannerApiError(f"{method} {path}: {res.status} {message}")
-                if res.content_type == "application/json":
+                if res.content_type != "application/json":
+                    # a reverse proxy's or web server's page instead of the API
+                    raise ScannerApiError(
+                        f"{method} {path}: {res.status} answered with {res.content_type or 'no content type'} instead of JSON "
+                        "(is this the container's web interface?)"
+                    )
+                try:
                     return await res.json()
-                return await res.text()
+                except (json.JSONDecodeError, aiohttp.ContentTypeError) as err:
+                    raise ScannerApiError(f"{method} {path}: {res.status} answered with invalid JSON ({err})") from err
         except (aiohttp.ClientError, asyncio.TimeoutError) as err:
             raise ScannerCannotConnect(f"{self.base_url}: {err}") from err
 
@@ -119,6 +127,8 @@ class ScannerApi:
         url = self.download_url(file_name)
         try:
             async with self._session.get(url, headers=self.headers, timeout=aiohttp.ClientTimeout(total=120)) as res:
+                if res.status == 401:
+                    raise ScannerAuthError("API token required or wrong")
                 if res.status == 404:
                     raise ScannerApiError(f"{file_name}: not found")
                 if res.status >= 400:
@@ -134,6 +144,9 @@ class ScannerApi:
             res = await self._session.get(url, headers=self.headers, timeout=aiohttp.ClientTimeout(total=300))
         except (aiohttp.ClientError, asyncio.TimeoutError) as err:
             raise ScannerCannotConnect(f"{self.base_url}: {err}") from err
+        if res.status == 401:
+            res.release()
+            raise ScannerAuthError("API token required or wrong")
         if res.status >= 400:
             res.release()
             raise ScannerApiError(f"download {file_name}: {res.status}")

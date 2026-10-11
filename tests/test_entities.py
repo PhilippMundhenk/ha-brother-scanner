@@ -175,3 +175,41 @@ async def test_rear_button_only_without_email_action(hass: HomeAssistant, config
     await hass.async_block_till_done()
     posts = [r for r in container.requests if r[0] == "POST"]
     assert posts[-1][1] == "/api/jobs/2026-10-10-11-00-00/rear"
+
+
+async def test_rejected_token_while_polling_starts_reauth(hass: HomeAssistant, config_entry, container: FakeContainer) -> None:
+    await setup_entry(hass, config_entry)
+    container.token = "changed"
+    container.token_rejects_reads = True
+    await poll(hass, config_entry)
+    await hass.async_block_till_done()
+    flows = [f for f in hass.config_entries.flow.async_progress() if f["handler"] == DOMAIN]
+    assert flows and flows[0]["context"]["source"] == "reauth"
+
+
+async def test_poll_survives_odd_answers(hass: HomeAssistant, config_entry, container: FakeContainer) -> None:
+    await setup_entry(hass, config_entry)
+    container.jobs.append("not a job")  # type: ignore[arg-type]
+    container.files.insert(0, "junk")  # type: ignore[arg-type]
+    await poll(hass, config_entry)
+    assert hass.states.get("sensor.office_scanner_state").state == "idle"
+
+    container.html = True
+    await poll(hass, config_entry)
+    assert hass.states.get("sensor.office_scanner_state").state == "unavailable"
+    container.html = False
+    await poll(hass, config_entry)
+    assert hass.states.get("sensor.office_scanner_state").state == "idle"
+
+
+async def test_download_view_errors(hass: HomeAssistant, config_entry, container: FakeContainer, hass_client) -> None:
+    await setup_entry(hass, config_entry)
+    client = await hass_client()
+    assert (await client.get(f"/api/brother_scanner/{config_entry.entry_id}/download/nope.pdf")).status == 404
+    assert (await client.get(f"/api/brother_scanner/{config_entry.entry_id}/download/..%2Fx.pdf")).status in (400, 404)
+    assert (await client.get("/api/brother_scanner/unknown-entry/download/a.pdf")).status == 404
+    container.token = "changed"
+    container.token_rejects_reads = True
+    res = await client.get(f"/api/brother_scanner/{config_entry.entry_id}/download/2026-10-10-10-00-00.pdf")
+    assert res.status == 502
+    assert "token" in await res.text()

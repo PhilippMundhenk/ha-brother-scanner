@@ -76,8 +76,13 @@ async def validate_input(hass, data: dict[str, Any]) -> dict[str, Any]:
         ssl=data.get(CONF_SSL, False),
     )
     actions = await api.get_actions()
-    api_version = actions.get("api_version", 1)
-    if int(api_version) > SUPPORTED_API_VERSION:
+    if not isinstance(actions, dict) or not isinstance(actions.get("actions"), list):
+        raise ScannerApiError("GET /api/actions: the answer is not the container's API (no actions list)")
+    try:
+        api_version = int(actions.get("api_version", 1))
+    except (TypeError, ValueError) as err:
+        raise ScannerApiError(f"GET /api/actions: unusable api_version {actions.get('api_version')!r}") from err
+    if api_version > SUPPORTED_API_VERSION:
         raise UnsupportedApi(str(api_version))
     device = actions.get("device") or {}
     name = device.get("name") or data[CONF_HOST]
@@ -143,6 +148,7 @@ class BrotherScannerConfigFlow(ConfigFlow, domain=DOMAIN):
 
     async def async_step_reauth_confirm(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
         errors: dict[str, str] = {}
+        placeholders: dict[str, str] = {"detail": ""}
         entry = self._get_reauth_entry()
         if user_input is not None:
             data = {**entry.data, CONF_TOKEN: user_input[CONF_TOKEN]}
@@ -150,14 +156,25 @@ class BrotherScannerConfigFlow(ConfigFlow, domain=DOMAIN):
                 await validate_input(self.hass, data)
             except ScannerAuthError:
                 errors["base"] = "invalid_auth"
-            except ScannerCannotConnect:
+            except ScannerCannotConnect as err:
                 errors["base"] = "cannot_connect"
+                placeholders["detail"] = str(err)
+            except UnsupportedApi:
+                errors["base"] = "unsupported_api"
+            except ScannerApiError as err:
+                errors["base"] = "api_error"
+                placeholders["detail"] = str(err)
+            except Exception as err:  # noqa: BLE001
+                _LOGGER.exception("Unexpected error talking to the scanner container")
+                errors["base"] = "unknown"
+                placeholders["detail"] = f"{type(err).__name__}: {err}"
             else:
                 return self.async_update_reload_and_abort(entry, data=data)
         return self.async_show_form(
             step_id="reauth_confirm",
             data_schema=vol.Schema({vol.Required(CONF_TOKEN): str}),
             errors=errors,
+            description_placeholders=placeholders,
         )
 
     @staticmethod

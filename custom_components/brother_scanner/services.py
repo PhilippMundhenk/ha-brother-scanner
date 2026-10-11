@@ -129,7 +129,10 @@ def async_setup_services(hass: HomeAssistant) -> None:
             destination.write_bytes(content)
             return str(destination)
 
-        written = await hass.async_add_executor_job(write)
+        try:
+            written = await hass.async_add_executor_job(write)
+        except OSError as err:
+            raise HomeAssistantError(f"Could not write {file_name} to {target}: {err}") from err
         return {"file": file_name, "path": written, "size": len(content)}
 
     hass.services.async_register(DOMAIN, SERVICE_SCAN, scan, schema=SCAN_SCHEMA, supports_response=SupportsResponse.OPTIONAL)

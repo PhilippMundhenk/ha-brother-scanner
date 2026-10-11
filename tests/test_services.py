@@ -66,6 +66,12 @@ async def test_download_last_scan(hass: HomeAssistant, config_entry, container: 
     assert response["file"] == "2026-10-10-10-00-00-ocr.pdf"
     assert (tmp_path / "sub" / "latest.pdf").read_bytes() == PDF
 
+    # a path that cannot be written is reported, not a traceback
+    blocked = tmp_path / "blocked"
+    blocked.write_text("a file, not a directory")
+    with pytest.raises(HomeAssistantError, match="Could not write"):
+        await hass.services.async_call(DOMAIN, "download_last_scan", {"path": str(blocked / "x.pdf")}, blocking=True, return_response=True)
+
     with pytest.raises(ServiceValidationError):
         await hass.services.async_call(DOMAIN, "download_last_scan", {"path": "/etc/scan.pdf"}, blocking=True)
 

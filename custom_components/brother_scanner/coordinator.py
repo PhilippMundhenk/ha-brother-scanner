@@ -9,6 +9,7 @@ from typing import Any
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
+from homeassistant.exceptions import ConfigEntryAuthFailed
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .api import ScannerApi, ScannerApiError, ScannerAuthError, ScannerCannotConnect
@@ -139,13 +140,20 @@ class ScannerCoordinator(DataUpdateCoordinator[ScannerData]):
             jobs = await self.api.get_jobs(JOBS_LIMIT)
             newest = await self.api.get_newest_file()
         except ScannerAuthError as err:
-            raise UpdateFailed(f"API token rejected: {err}") from err
+            raise ConfigEntryAuthFailed(f"API token rejected: {err}") from err
         except ScannerCannotConnect as err:
             raise UpdateFailed(f"Container not reachable: {err}") from err
         except ScannerApiError as err:
             raise UpdateFailed(str(err)) from err
 
-        data = ScannerData(status=status, jobs=jobs if isinstance(jobs, list) else [], newest_file=newest, actions=self._actions)
+        if not isinstance(status, dict):
+            raise UpdateFailed(f"GET /api/scanner/status: unexpected answer {type(status).__name__}")
+        data = ScannerData(
+            status=status,
+            jobs=[job for job in jobs if isinstance(job, dict)] if isinstance(jobs, list) else [],
+            newest_file=newest if isinstance(newest, dict) else None,
+            actions=self._actions if isinstance(self._actions, dict) else {},
+        )
         self._fire_events(data)
         return data
 

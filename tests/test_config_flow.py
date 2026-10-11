@@ -38,6 +38,23 @@ async def test_user_flow_errors(hass: HomeAssistant, entry_data, container: Fake
     assert "404 page not found" in result["description_placeholders"]["detail"]
     container.not_found = False
 
+    # a web server's page with status 200, and some other JSON API
+    container.html = True
+    result = await hass.config_entries.flow.async_configure(result["flow_id"], entry_data)
+    assert result["errors"] == {"base": "api_error"}
+    assert "text/html instead of JSON" in result["description_placeholders"]["detail"]
+    container.html = False
+    container.foreign_json = True
+    result = await hass.config_entries.flow.async_configure(result["flow_id"], entry_data)
+    assert result["errors"] == {"base": "api_error"}
+    assert "no actions list" in result["description_placeholders"]["detail"]
+    container.foreign_json = False
+    container.actions["api_version"] = "banana"
+    result = await hass.config_entries.flow.async_configure(result["flow_id"], entry_data)
+    assert result["errors"] == {"base": "api_error"}
+    assert "api_version" in result["description_placeholders"]["detail"]
+    container.actions["api_version"] = 1
+
     container.actions["api_version"] = 99
     result = await hass.config_entries.flow.async_configure(result["flow_id"], entry_data)
     assert result["errors"] == {"base": "unsupported_api"}
@@ -112,3 +129,25 @@ async def test_reauth_flow(hass: HomeAssistant, config_entry, container: FakeCon
     assert result["type"] is FlowResultType.ABORT
     assert result["reason"] == "reauth_successful"
     assert config_entry.data[CONF_TOKEN] == "new-token"
+
+
+async def test_reauth_flow_reports_errors(hass: HomeAssistant, config_entry, container: FakeContainer) -> None:
+    await setup_entry(hass, config_entry)
+    config_entry.async_start_reauth(hass)
+    await hass.async_block_till_done()
+    flow = next(f for f in hass.config_entries.flow.async_progress() if f["context"].get("source") == config_entries.SOURCE_REAUTH)
+
+    container.fail_status = True
+    result = await hass.config_entries.flow.async_configure(flow["flow_id"], {CONF_TOKEN: "x"})
+    assert result["errors"] == {"base": "api_error"}
+    assert "500" in result["description_placeholders"]["detail"]
+    container.fail_status = False
+
+    container.actions["api_version"] = 99
+    result = await hass.config_entries.flow.async_configure(flow["flow_id"], {CONF_TOKEN: "x"})
+    assert result["errors"] == {"base": "unsupported_api"}
+    container.actions["api_version"] = 1
+
+    result = await hass.config_entries.flow.async_configure(flow["flow_id"], {CONF_TOKEN: "x"})
+    assert result["type"] is FlowResultType.ABORT
+    assert result["reason"] == "reauth_successful"

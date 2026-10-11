@@ -12,7 +12,7 @@ from aiohttp import web
 
 from homeassistant.components.http import HomeAssistantView
 
-from .api import ScannerApiError, ScannerCannotConnect
+from .api import ScannerApiError, ScannerAuthError, ScannerCannotConnect
 from .const import DOMAIN, DOWNLOAD_URL_BASE
 
 
@@ -34,6 +34,8 @@ class ScannerDownloadView(HomeAssistantView):
             upstream = await coordinator.api.open_download(file_name)
         except ScannerCannotConnect:
             return web.Response(status=502, text="scanner container not reachable")
+        except ScannerAuthError:
+            return web.Response(status=502, text="scanner container rejected the API token")
         except ScannerApiError as err:
             return web.Response(status=404, text=str(err))
         response = web.StreamResponse(status=200)
