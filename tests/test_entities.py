@@ -213,3 +213,20 @@ async def test_download_view_errors(hass: HomeAssistant, config_entry, container
     res = await client.get(f"/api/brother_scanner/{config_entry.entry_id}/download/2026-10-10-10-00-00.pdf")
     assert res.status == 502
     assert "token" in await res.text()
+
+
+async def test_ocr_copy_is_not_offered_twice(hass: HomeAssistant, config_entry, container: FakeContainer) -> None:
+    await setup_entry(hass, config_entry)
+    attrs = hass.states.get("sensor.office_scanner_last_scan").attributes
+    assert attrs["ocr_download_url"].endswith("/download/2026-10-10-10-00-00-ocr.pdf")
+    assert attrs["is_ocr_copy"] is False
+
+    # the original was removed after OCR: the newest file is the OCR copy itself
+    container.files = [{"file": "2026-10-10-10-00-00-ocr.pdf", "size": 12, "fileModificationTime": 1760090500}]
+    await poll(hass, config_entry)
+    state = hass.states.get("sensor.office_scanner_last_scan")
+    assert state.state == "2026-10-10-10-00-00-ocr.pdf"
+    assert state.attributes["ocr_download_url"] is None
+    assert state.attributes["ocr_file"] is None
+    assert state.attributes["is_ocr_copy"] is True
+    assert state.attributes["download_url"].endswith("/download/2026-10-10-10-00-00-ocr.pdf")

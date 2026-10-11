@@ -84,13 +84,19 @@ class LastScanSensor(ScannerEntity, SensorEntity):
         newest = self.coordinator.data.newest_file or {}
         latest = self.coordinator.data.latest_job or {}
         name = newest.get("file")
+        # the OCR copy is a second download only while it is not the newest file itself
+        # (REMOVE_ORIGINAL_AFTER_OCR leaves just the copy)
+        ocr_file = latest.get("ocr_file") if latest.get("ocr") == "done" else None
+        if ocr_file and ocr_file == name:
+            ocr_file = None
         attributes: dict[str, Any] = {
             "size": newest.get("size"),
             "modified": _iso(newest.get("fileModificationTime")),
             "download_url": self.coordinator.proxy_download_url(name) if name else None,
             "direct_url": self.coordinator.api.download_url(name) if name else None,
-            "ocr_file": latest.get("ocr_file") if latest.get("ocr") == "done" else None,
-            "ocr_download_url": self.coordinator.proxy_download_url(latest["ocr_file"]) if latest.get("ocr") == "done" and latest.get("ocr_file") else None,
+            "ocr_file": ocr_file,
+            "ocr_download_url": self.coordinator.proxy_download_url(ocr_file) if ocr_file else None,
+            "is_ocr_copy": bool(name) and name == latest.get("ocr_file") and latest.get("ocr") == "done",
         }
         return attributes
 
