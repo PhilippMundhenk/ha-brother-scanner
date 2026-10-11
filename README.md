@@ -98,16 +98,6 @@ actions:
 
 The container's API also works with Home Assistant's built-in `rest` sensor and `rest_command`; see the "Home Assistant" section of the [container README](https://github.com/PhilippMundhenk/BrotherScannerDocker#home-assistant). This integration adds the config flow, the dynamic buttons, the capabilities, events, the download proxy and the card.
 
-## Publishing to the HACS default store
-
-The repository is prepared for the default store. The remaining steps need the repository owner:
-
-1. Publish a release `vX.Y.Z` whose tag matches `version` in `manifest.json` (the Release workflow checks this).
-2. The Validate workflow must be green: hassfest, HACS validation and the tests.
-3. The icon ships with the integration (`custom_components/brother_scanner/brand/`, shown by Home Assistant 2026.3 and newer); the brands repository no longer takes custom integrations, so there is nothing to submit there. It is a generic multifunction printer drawing (`tools/make_icons.py`), not a Brother logo.
-4. Open a pull request against [hacs/default](https://github.com/hacs/default) adding `PhilippMundhenk/ha-brother-scanner` to the `integration` file (one line, alphabetical order). The HACS bot checks the repository: description, topics (`home-assistant`, `hacs`, `brother`, `scanner`), a release, `hacs.json`, the manifest and the brands entry.
-5. Until that is merged, users add the repository as a custom repository as described above.
-
 ## Development
 
 ```sh
@@ -116,6 +106,8 @@ pytest
 ```
 
 The tests run a fake container (an aiohttp server speaking the container's API) and exercise the config flow, entities, services, events and the download view. For a test against the real thing, start the container's end-to-end image (`tests/e2e` in BrotherScannerDocker) and add it through the UI.
+
+A release tag `vX.Y.Z` must match `version` in `manifest.json`; the Release workflow checks it and attaches a zip of the integration.
 
 ## License
 
