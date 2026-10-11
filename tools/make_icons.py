@@ -1,9 +1,10 @@
-"""Draws the generic multifunction printer/scanner icon for the brands folder.
+"""Draws the generic multifunction printer/scanner icon the integration ships.
 
 No brand name, logo or brand colour: a neutral grey device with an open lid,
 a sheet on the glass, a paper slot and a green ready light. Writes
-brands/brother_scanner/icon.png (256 x 256) and icon@2x.png (512 x 512); there
-is no logo.png, so Home Assistant uses the icon in its place.
+custom_components/brother_scanner/brand/icon.png (256 x 256) and icon@2x.png
+(512 x 512), which Home Assistant 2026.3 and newer show for the integration
+(local brand images); there is no logo.png, so the icon is used in its place.
 
     python tools/make_icons.py
 """
@@ -12,7 +13,7 @@ import os
 from PIL import Image, ImageDraw
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-OUT = os.path.join(HERE, "..", "brands", "brother_scanner")
+OUT = os.path.join(HERE, "..", "custom_components", "brother_scanner", "brand")
 
 BODY = (72, 79, 92, 255)
 BODY_DARK = (45, 51, 62, 255)

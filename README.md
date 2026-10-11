@@ -100,7 +100,7 @@ The repository is prepared for the default store. The remaining steps need the r
 
 1. Publish a release `vX.Y.Z` whose tag matches `version` in `manifest.json` (the Release workflow checks this).
 2. The Validate workflow must be green: hassfest, HACS validation and the tests.
-3. Add the icon to [home-assistant/brands](https://github.com/home-assistant/brands): copy `brands/brother_scanner/` from this repository to `custom_integrations/brother_scanner/` in a fork and open a pull request. The icon is a generic multifunction printer drawing (`tools/make_icons.py`), not a Brother logo; there is no `logo.png`, so Home Assistant shows the icon in its place.
+3. The icon ships with the integration (`custom_components/brother_scanner/brand/`, shown by Home Assistant 2026.3 and newer); the brands repository no longer takes custom integrations, so there is nothing to submit there. It is a generic multifunction printer drawing (`tools/make_icons.py`), not a Brother logo.
 4. Open a pull request against [hacs/default](https://github.com/hacs/default) adding `PhilippMundhenk/ha-brother-scanner` to the `integration` file (one line, alphabetical order). The HACS bot checks the repository: description, topics (`home-assistant`, `hacs`, `brother`, `scanner`), a release, `hacs.json`, the manifest and the brands entry.
 5. Until that is merged, users add the repository as a custom repository as described above.
 
