@@ -36,7 +36,8 @@ class ScannerApi:
         self._session = session
         self._token = token or ""
         scheme = "https" if ssl else "http"
-        self.base_url = f"{scheme}://{host}:{port}"
+        default_port = 443 if ssl else 80
+        self.base_url = f"{scheme}://{host}" if int(port) == default_port else f"{scheme}://{host}:{port}"
         self._timeout = aiohttp.ClientTimeout(total=timeout)
 
     @property

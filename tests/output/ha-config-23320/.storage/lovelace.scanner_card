@@ -1,0 +1,22 @@
+{
+  "version": 1,
+  "minor_version": 1,
+  "key": "lovelace.scanner_card",
+  "data": {
+    "config": {
+      "title": "Home",
+      "views": [
+        {
+          "title": "Scanner",
+          "path": "scanner",
+          "cards": [
+            {
+              "type": "custom:brother-scanner-card",
+              "entity": "sensor.office_state"
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

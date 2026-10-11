@@ -67,6 +67,7 @@ class FakeContainer:
         self.token: str | None = None
         self.requests: list[tuple[str, str, dict[str, Any]]] = []
         self.fail_status = False
+        self.not_found = False  # answer like a reverse proxy without a matching route
         self.next_job = "2026-10-10-11-00-00"
 
     def _authorized(self, request: web.Request) -> bool:
@@ -82,6 +83,8 @@ class FakeContainer:
         self.requests.append((request.method, path, body))
         if self.fail_status:
             return web.Response(status=500, text="boom")
+        if self.not_found:
+            return web.Response(status=404, text="404 page not found\n")
         if path == "/api/actions":
             actions = copy.deepcopy(self.actions)
             if self.token:

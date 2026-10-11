@@ -21,7 +21,7 @@ One device per container, with these entities:
 | Last job, Last error, Container version | diagnostic sensors | State of the newest job, its error text, the image version |
 | Scanning, Waiting for rear pages, OCR running, Scanner reachable, Problem | binary sensors | What the web UI shows with its icons |
 | One button per scan action | button | Named like the container's buttons (`RENAME_GUI_*`), disabled actions (`DISABLE_GUI_*`) are created disabled |
-| Scan rear pages | button | Only available while a scan waits for its rear pages |
+| Scan rear pages | button | Only when the container's email action is disabled (that action is the web UI's rear-pages button); available while a scan waits for its rear pages |
 | Resolution, Mode, Source | select (config) | Options from the device (`scanimage -A` at container start); `Container default` leaves the container's setting in charge |
 
 Services (all return response data):
@@ -54,6 +54,8 @@ Copy `custom_components/brother_scanner` into your `config/custom_components/` f
 ## Setup
 
 Settings → Devices & services → Add integration → **Brother Scanner (Docker)**. Enter the host and port of the container's web interface. The API token is only needed when the container runs with `API_TOKEN`.
+
+Setup asks for the address of the container's web interface: a host name or IP, or a full URL such as `https://scanner.example.org` or `http://192.168.1.5:8080`. The port may stay empty (80, or 443 with HTTPS). A `404 page not found` answer in the setup dialog comes from a reverse proxy in front of the container: the name or port does not reach the container's web interface, which must be at the root of the address.
 
 Options (gear icon on the integration): poll interval (default 5 s), a picture URL for the card, or hide the picture. Without a URL the card shows a generic illustration chosen by the model family (MFC/DCP, ADS, DS).
 

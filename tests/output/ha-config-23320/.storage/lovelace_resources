@@ -1,0 +1,14 @@
+{
+  "version": 1,
+  "minor_version": 1,
+  "key": "lovelace_resources",
+  "data": {
+    "items": [
+      {
+        "id": "b7d8c5ae8d0a46c1897003e5624e40fc",
+        "url": "/local/brother-scanner-card.js?v=1",
+        "type": "module"
+      }
+    ]
+  }
+}

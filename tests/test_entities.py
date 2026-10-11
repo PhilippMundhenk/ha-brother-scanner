@@ -47,7 +47,8 @@ async def test_entities_and_device(hass: HomeAssistant, config_entry, container:
     assert registry.async_get("button.office_scanner_archive") is not None
     disabled = registry.async_get("button.office_scanner_scan_to_image")
     assert disabled is not None and disabled.disabled_by is er.RegistryEntryDisabler.INTEGRATION
-    assert hass.states.get("button.office_scanner_scan_rear_pages").state == "unavailable"
+    # the email action ("Rear pages") is enabled, so no second rear-pages button
+    assert hass.states.get("button.office_scanner_scan_rear_pages") is None
 
 
 async def test_state_derivation_and_events(hass: HomeAssistant, config_entry, container: FakeContainer) -> None:
@@ -71,7 +72,6 @@ async def test_state_derivation_and_events(hass: HomeAssistant, config_entry, co
     await poll(hass, config_entry)
     assert hass.states.get("sensor.office_scanner_state").state == "waiting_for_rear"
     assert hass.states.get("sensor.office_scanner_state").attributes["waiting_job"] == "2026-10-10-11-00-00"
-    assert hass.states.get("button.office_scanner_scan_rear_pages").state != "unavailable"
     assert events[-1].event_type == EVENT_WAITING_FOR_REAR
 
     # done, then the OCR copy appears
@@ -128,10 +128,6 @@ async def test_buttons_and_selects(hass: HomeAssistant, config_entry, container:
     container.status["waiting"] = True
     container.jobs.insert(0, {"job": "2026-10-10-11-00-00", "state": "waiting_for_rear"})
     await poll(hass, config_entry)
-    await hass.services.async_call("button", "press", {"entity_id": "button.office_scanner_scan_rear_pages"}, blocking=True)
-    await hass.async_block_till_done()
-    posts = [r for r in container.requests if r[0] == "POST"]
-    assert posts[-1][1] == "/api/jobs/2026-10-10-11-00-00/rear"
     await hass.services.async_call("button", "press", {"entity_id": "button.office_scanner_rear_pages"}, blocking=True)
     posts = [r for r in container.requests if r[0] == "POST"]
     assert posts[-1][1] == "/api/jobs/2026-10-10-11-00-00/rear"
@@ -163,3 +159,19 @@ async def test_unload(hass: HomeAssistant, config_entry) -> None:
     assert await hass.config_entries.async_unload(config_entry.entry_id)
     await hass.async_block_till_done()
     assert hass.states.get("sensor.office_scanner_state").state == "unavailable"
+
+
+async def test_rear_button_only_without_email_action(hass: HomeAssistant, config_entry, container: FakeContainer) -> None:
+    container.actions["actions"][1]["enabled"] = False  # DISABLE_GUI_SCANTOEMAIL in the container
+    await setup_entry(hass, config_entry)
+    rear = hass.states.get("button.office_scanner_scan_rear_pages")
+    assert rear is not None and rear.state == "unavailable", "nothing waits for rear pages yet"
+
+    container.status["waiting"] = True
+    container.jobs.insert(0, {"job": "2026-10-10-11-00-00", "state": "waiting_for_rear"})
+    await poll(hass, config_entry)
+    assert hass.states.get("button.office_scanner_scan_rear_pages").state != "unavailable"
+    await hass.services.async_call("button", "press", {"entity_id": "button.office_scanner_scan_rear_pages"}, blocking=True)
+    await hass.async_block_till_done()
+    posts = [r for r in container.requests if r[0] == "POST"]
+    assert posts[-1][1] == "/api/jobs/2026-10-10-11-00-00/rear"

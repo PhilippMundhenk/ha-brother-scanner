@@ -1,4 +1,4 @@
-"""Buttons: one per enabled scan action (named like the container's web UI) and rear pages."""
+"""Buttons: one per scan action (named like the container's web UI), plus rear pages when the container has no email action."""
 
 from __future__ import annotations
 
@@ -26,10 +26,14 @@ ICONS = {
 
 async def async_setup_entry(hass: HomeAssistant, entry: ScannerConfigEntry, async_add_entities: AddEntitiesCallback) -> None:
     coordinator = entry.runtime_data
-    entities: list[ButtonEntity] = [
-        ScanButton(coordinator, action) for action in coordinator.data.actions.get("actions", []) if action.get("target")
-    ]
-    entities.append(RearPagesButton(coordinator))
+    actions = [action for action in coordinator.data.actions.get("actions", []) if action.get("target")]
+    entities: list[ButtonEntity] = [ScanButton(coordinator, action) for action in actions]
+    # The container's email action scans the rear pages of the waiting job (the
+    # web UI's button for it, often renamed to "Scan rear pages"), so a second
+    # rear-pages button would duplicate it; it is only added when that action
+    # is disabled in the container.
+    if not any(action["target"] == "email" and action.get("enabled", True) for action in actions):
+        entities.append(RearPagesButton(coordinator))
     async_add_entities(entities)
 
 

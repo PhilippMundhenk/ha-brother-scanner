@@ -1,9 +1,10 @@
-"""Config flow: host, port, token; options: poll interval and image."""
+"""Config flow: host (or URL), port, token; options: poll interval and image."""
 
 from __future__ import annotations
 
 import logging
 from typing import Any
+from urllib.parse import urlsplit
 
 import voluptuous as vol
 
@@ -13,7 +14,7 @@ from homeassistant.core import callback
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 import homeassistant.helpers.config_validation as cv
 
-from .api import ScannerApi, ScannerAuthError, ScannerCannotConnect
+from .api import ScannerApi, ScannerApiError, ScannerAuthError, ScannerCannotConnect
 from .const import (
     CONF_HIDE_IMAGE,
     CONF_IMAGE_URL,
@@ -22,6 +23,7 @@ from .const import (
     CONF_TOKEN,
     DEFAULT_PORT,
     DEFAULT_SCAN_INTERVAL,
+    DEFAULT_SSL_PORT,
     DOMAIN,
     MAX_SCAN_INTERVAL,
     MIN_SCAN_INTERVAL,
@@ -33,11 +35,35 @@ _LOGGER = logging.getLogger(__name__)
 USER_SCHEMA = vol.Schema(
     {
         vol.Required(CONF_HOST): str,
-        vol.Required(CONF_PORT, default=DEFAULT_PORT): vol.All(vol.Coerce(int), vol.Range(min=1, max=65535)),
+        # empty: 80, or 443 with HTTPS (a form cannot switch the port when the HTTPS box is ticked)
+        vol.Optional(CONF_PORT): vol.All(vol.Coerce(int), vol.Range(min=1, max=65535)),
         vol.Optional(CONF_TOKEN, default=""): str,
         vol.Optional(CONF_SSL, default=False): bool,
     }
 )
+
+
+def normalize_input(data: dict[str, Any]) -> dict[str, Any]:
+    """Resolve host, port and HTTPS from what the user typed.
+
+    The host field also takes a URL (https://scanner.example.org,
+    http://192.168.1.5:8080): its scheme and port win over the form fields.
+    Without a port, HTTPS means 443 and plain HTTP means 80.
+    """
+    host = str(data.get(CONF_HOST, "")).strip()
+    port = data.get(CONF_PORT)
+    ssl = bool(data.get(CONF_SSL, False))
+    if "://" in host:
+        parts = urlsplit(host)
+        if parts.scheme in ("http", "https") and parts.hostname:
+            ssl = parts.scheme == "https"
+            host = parts.hostname
+            if parts.port:
+                port = parts.port
+    host = host.rstrip("/")
+    if not port:
+        port = DEFAULT_SSL_PORT if ssl else DEFAULT_PORT
+    return {**data, CONF_HOST: host, CONF_PORT: int(port), CONF_SSL: ssl}
 
 
 async def validate_input(hass, data: dict[str, Any]) -> dict[str, Any]:
@@ -73,23 +99,38 @@ class BrotherScannerConfigFlow(ConfigFlow, domain=DOMAIN):
 
     async def async_step_user(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
         errors: dict[str, str] = {}
+        placeholders: dict[str, str] = {"detail": ""}
         if user_input is not None:
+            user_input = normalize_input(user_input)
             await self.async_set_unique_id(f"{user_input[CONF_HOST]}:{user_input[CONF_PORT]}")
             self._abort_if_unique_id_configured()
             try:
                 info = await validate_input(self.hass, user_input)
             except ScannerAuthError:
                 errors["base"] = "invalid_auth"
-            except ScannerCannotConnect:
+            except ScannerCannotConnect as err:
                 errors["base"] = "cannot_connect"
+                placeholders["detail"] = str(err)
             except UnsupportedApi:
                 errors["base"] = "unsupported_api"
-            except Exception:  # noqa: BLE001
+            except ScannerApiError as err:
+                # the address answered, but not with the container's API (a reverse
+                # proxy's 404, a web server's HTML page, ...): say what came back
+                _LOGGER.warning("The scanner container's API did not answer as expected: %s", err)
+                errors["base"] = "api_error"
+                placeholders["detail"] = str(err)
+            except Exception as err:  # noqa: BLE001
                 _LOGGER.exception("Unexpected error talking to the scanner container")
                 errors["base"] = "unknown"
+                placeholders["detail"] = f"{type(err).__name__}: {err}"
             else:
                 return self.async_create_entry(title=info["title"], data=user_input)
-        return self.async_show_form(step_id="user", data_schema=USER_SCHEMA, errors=errors)
+        return self.async_show_form(
+            step_id="user",
+            data_schema=self.add_suggested_values_to_schema(USER_SCHEMA, user_input),
+            errors=errors,
+            description_placeholders=placeholders,
+        )
 
     async def async_step_reauth(self, entry_data: dict[str, Any]) -> ConfigFlowResult:
         """The token was rejected: ask for a new one."""

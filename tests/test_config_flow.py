@@ -27,8 +27,16 @@ async def test_user_flow_errors(hass: HomeAssistant, entry_data, container: Fake
 
     container.fail_status = True
     result = await hass.config_entries.flow.async_configure(result["flow_id"], entry_data)
-    assert result["errors"] == {"base": "unknown"}
+    assert result["errors"] == {"base": "api_error"}
+    assert "500" in result["description_placeholders"]["detail"]
     container.fail_status = False
+
+    # an address that answers, but not with the API (a reverse proxy's 404 page)
+    container.not_found = True
+    result = await hass.config_entries.flow.async_configure(result["flow_id"], entry_data)
+    assert result["errors"] == {"base": "api_error"}
+    assert "404 page not found" in result["description_placeholders"]["detail"]
+    container.not_found = False
 
     container.actions["api_version"] = 99
     result = await hass.config_entries.flow.async_configure(result["flow_id"], entry_data)
@@ -37,6 +45,30 @@ async def test_user_flow_errors(hass: HomeAssistant, entry_data, container: Fake
 
     result = await hass.config_entries.flow.async_configure(result["flow_id"], {**entry_data, "port": 1})
     assert result["errors"] == {"base": "cannot_connect"}
+    assert result["description_placeholders"]["detail"]
+
+
+async def test_user_flow_takes_a_url_and_defaults_the_port(hass: HomeAssistant, entry_data, container: FakeContainer) -> None:
+    result = await hass.config_entries.flow.async_init(DOMAIN, context={"source": config_entries.SOURCE_USER})
+    url = f"http://{entry_data['host']}:{entry_data['port']}/"
+    result = await hass.config_entries.flow.async_configure(result["flow_id"], {"host": url, "ssl": True})
+    await hass.async_block_till_done()
+    assert result["type"] is FlowResultType.CREATE_ENTRY
+    assert result["data"]["host"] == entry_data["host"]
+    assert result["data"]["port"] == entry_data["port"]
+    assert result["data"]["ssl"] is False, "the URL's scheme wins over the checkbox"
+
+
+def test_normalize_input() -> None:
+    from custom_components.brother_scanner.config_flow import normalize_input
+
+    assert normalize_input({"host": "scanner.local"}) == {"host": "scanner.local", "port": 80, "ssl": False}
+    assert normalize_input({"host": "scanner.local", "ssl": True}) == {"host": "scanner.local", "port": 443, "ssl": True}
+    assert normalize_input({"host": " scanner.local ", "port": 8080, "ssl": True}) == {"host": "scanner.local", "port": 8080, "ssl": True}
+    assert normalize_input({"host": "https://scanner.example.org", "port": 80}) == {"host": "scanner.example.org", "port": 80, "ssl": True}
+    assert normalize_input({"host": "https://scanner.example.org/"}) == {"host": "scanner.example.org", "port": 443, "ssl": True}
+    assert normalize_input({"host": "http://192.168.1.5:8080/some/path", "ssl": True}) == {"host": "192.168.1.5", "port": 8080, "ssl": False}
+    assert normalize_input({"host": "ftp://x", "port": 0}) == {"host": "ftp://x", "port": 80, "ssl": False}
 
 
 async def test_user_flow_wrong_token(hass: HomeAssistant, entry_data, container: FakeContainer) -> None:
