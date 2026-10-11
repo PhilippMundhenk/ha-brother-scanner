@@ -4,8 +4,10 @@ on:
   push:
   pull_request:
   schedule:
-    - cron: "0 4 * * 1"
+    - cron: "0 0 * * *"  # daily, so a change in HACS or hassfest shows up without a push
   workflow_dispatch:
+
+permissions: {}
 
 jobs:
   hassfest:

@@ -43,6 +43,10 @@ Downloads go through Home Assistant (`/api/brother_scanner/<entry>/download/<fil
 
 ### HACS (custom repository, until the integration is in the default store)
 
+[![Open your Home Assistant instance and open this repository inside HACS.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=PhilippMundhenk&repository=ha-brother-scanner&category=integration)
+
+The badge opens the repository in your HACS; by hand:
+
 1. HACS → Integrations → menu (three dots) → **Custom repositories**
 2. Repository `https://github.com/PhilippMundhenk/ha-brother-scanner`, category **Integration**, Add
 3. Search for "Brother Scanner (Docker)", Download, restart Home Assistant
