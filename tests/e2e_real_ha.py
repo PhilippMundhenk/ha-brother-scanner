@@ -117,14 +117,22 @@ def main() -> int:
         entry_id = result["result"]["entry_id"]
         print(f"config entry created: {result['title']} ({entry_id})")
 
-        states = {s["entity_id"]: s for s in request(f"{ha}/api/states", token=token)}
+        # the platforms set up right after the entry; give them a moment
+        states: dict = {}
+        for _ in range(60):
+            states = {s["entity_id"]: s for s in request(f"{ha}/api/states", token=token)}
+            if "sensor.office_state" in states and states["sensor.office_state"]["state"] != "unavailable":
+                break
+            time.sleep(1)
         state = states["sensor.office_state"]
         assert state["state"] == "idle", state
         assert state["attributes"]["model"] == "MFC-SIMULATOR"
         assert [a["label"] for a in state["attributes"]["actions"]][0] == "Archive"
         assert state["attributes"]["capabilities"]["resolution"]["options"] == [100, 150, 200, 300, 400, 600]
         assert "button.office_archive" in states, sorted(k for k in states if k.startswith("button."))
-        assert states["button.office_scan_rear_pages"]["state"] == "unavailable"
+        # the container's email action is enabled, so the integration adds no second rear-pages button
+        assert "button.office_scan_rear_pages" not in states, "rear button duplicates the email action"
+        assert "button.office_scan_to_email" in states, sorted(k for k in states if k.startswith("button."))
         print("entities ok:", ", ".join(sorted(k for k in states if "office" in k)))
 
         # press the button, wait for the job, download through HA
