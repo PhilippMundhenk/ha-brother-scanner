@@ -16,6 +16,7 @@ import homeassistant.helpers.config_validation as cv
 
 from .api import ScannerApi, ScannerApiError, ScannerAuthError, ScannerCannotConnect
 from .const import (
+    CONF_DEVICE_STATUS,
     CONF_HIDE_IMAGE,
     CONF_IMAGE_URL,
     CONF_SCAN_INTERVAL,
@@ -184,7 +185,7 @@ class BrotherScannerConfigFlow(ConfigFlow, domain=DOMAIN):
 
 
 class BrotherScannerOptionsFlow(OptionsFlow):
-    """Poll interval, image URL, hide image."""
+    """Poll interval, image URL, hide image, device status polling."""
 
     async def async_step_init(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
         if user_input is not None:
@@ -197,6 +198,7 @@ class BrotherScannerOptionsFlow(OptionsFlow):
                 ),
                 vol.Optional(CONF_IMAGE_URL, default=options.get(CONF_IMAGE_URL, "")): str,
                 vol.Optional(CONF_HIDE_IMAGE, default=options.get(CONF_HIDE_IMAGE, False)): bool,
+                vol.Optional(CONF_DEVICE_STATUS, default=options.get(CONF_DEVICE_STATUS, True)): bool,
             }
         )
         return self.async_show_form(step_id="init", data_schema=schema)

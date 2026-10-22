@@ -1,4 +1,5 @@
-"""Binary sensors: scanning, waiting for rear pages, OCR running, reachable, problem."""
+"""Binary sensors: scanning, waiting for rear pages, OCR running, reachable, problem,
+and from the device itself (container 2.2+): Scan-to-PC registered, scan key enabled."""
 
 from __future__ import annotations
 
@@ -19,6 +20,16 @@ from .entity import ScannerEntity
 @dataclass(frozen=True, kw_only=True)
 class ScannerBinarySensorDescription(BinarySensorEntityDescription):
     value_fn: Callable[[ScannerData], bool | None]
+    # None: available whenever the container answers; else only when this says so
+    available_fn: Callable[[ScannerData], bool] | None = None
+
+
+def _device(d: ScannerData, key: str) -> bool | None:
+    return (d.device_status or {}).get(key)
+
+
+def _device_has(key: str) -> Callable[[ScannerData], bool]:
+    return lambda d: _device(d, key) is not None
 
 
 DESCRIPTIONS: tuple[ScannerBinarySensorDescription, ...] = (
@@ -44,11 +55,29 @@ DESCRIPTIONS: tuple[ScannerBinarySensorDescription, ...] = (
         device_class=BinarySensorDeviceClass.CONNECTIVITY,
         entity_category=EntityCategory.DIAGNOSTIC,
         value_fn=lambda d: d.reachable,
+        # None: the container has the reachability check disabled
+        available_fn=lambda d: d.reachable is not None,
     ),
     ScannerBinarySensorDescription(
         key="problem",
         device_class=BinarySensorDeviceClass.PROBLEM,
         value_fn=lambda d: (d.latest_job or {}).get("state") == "failed" or bool(d.queue.get("failed")),
+    ),
+    # From the scanner itself (GET /api/scanner/device): does the device currently
+    # list the container as a Scan-to-PC destination, i.e. do its buttons reach us?
+    ScannerBinarySensorDescription(
+        key="registered",
+        device_class=BinarySensorDeviceClass.CONNECTIVITY,
+        icon="mdi:cloud-check-outline",
+        value_fn=lambda d: _device(d, "registered"),
+        available_fn=_device_has("registered"),
+    ),
+    ScannerBinarySensorDescription(
+        key="scan_key_enabled",
+        entity_category=EntityCategory.DIAGNOSTIC,
+        icon="mdi:gesture-tap-button",
+        value_fn=lambda d: _device(d, "scan_key_enabled"),
+        available_fn=_device_has("scan_key_enabled"),
     ),
 )
 
@@ -71,7 +100,7 @@ class ScannerBinarySensor(ScannerEntity, BinarySensorEntity):
 
     @property
     def available(self) -> bool:
-        if self._key == "reachable":
-            # None: the container has the reachability check disabled
-            return super().available and self.coordinator.data.reachable is not None
-        return super().available
+        if not super().available:
+            return False
+        available_fn = self.entity_description.available_fn
+        return available_fn is None or available_fn(self.coordinator.data)

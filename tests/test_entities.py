@@ -230,3 +230,99 @@ async def test_ocr_copy_is_not_offered_twice(hass: HomeAssistant, config_entry, 
     assert state.attributes["ocr_file"] is None
     assert state.attributes["is_ocr_copy"] is True
     assert state.attributes["download_url"].endswith("/download/2026-10-10-10-00-00-ocr.pdf")
+
+
+# --- the scanner's own state (container 2.2+) and button presses on the device (#187)
+
+from custom_components.brother_scanner.const import CONF_DEVICE_STATUS, EVENT_BUTTON_PRESSED
+
+
+async def test_device_status_entities(hass: HomeAssistant, config_entry, container: FakeContainer) -> None:
+    await setup_entry(hass, config_entry)
+    assert hass.states.get("binary_sensor.office_scanner_scan_to_pc_registered").state == "on"
+    assert hass.states.get("binary_sensor.office_scanner_scan_key_enabled").state == "on"
+    display = hass.states.get("sensor.office_scanner_panel_display")
+    assert display.state == "Scan:   drück"
+    assert display.attributes["serial"] == "E73941F6N621420"
+    assert display.attributes["firmware"] == "Y2309112149"
+    assert display.attributes["scan_key_supported"] is True
+    state = hass.states.get("sensor.office_scanner_state")
+    assert state.attributes["registered"] is True
+    assert state.attributes["serial"] == "E73941F6N621420"
+    assert state.attributes["display"] == "Scan:   drück"
+    device = dr.async_get(hass).async_get_device(identifiers={(DOMAIN, config_entry.entry_id)})
+    assert device.serial_number == "E73941F6N621420"
+    assert device.hw_version == "Y2309112149"
+
+    # the device dropped the registration (the daemon died, the lease lapsed)
+    container.device_status["registered"] = False
+    await poll(hass, config_entry)
+    assert hass.states.get("binary_sensor.office_scanner_scan_to_pc_registered").state == "off"
+
+    # an older container without the endpoint: the device entities are unavailable, the rest works
+    container.device_status_404 = True
+    await poll(hass, config_entry)
+    assert hass.states.get("binary_sensor.office_scanner_scan_to_pc_registered").state == "unavailable"
+    assert hass.states.get("binary_sensor.office_scanner_scan_key_enabled").state == "unavailable"
+    assert hass.states.get("sensor.office_scanner_panel_display").state == "unavailable"
+    assert hass.states.get("sensor.office_scanner_state").state == "idle"
+    assert hass.states.get("sensor.office_scanner_state").attributes["registered"] is None
+
+    # the endpoint fails (openskey could not run): the poll still succeeds
+    container.device_status_404 = False
+    container.device_status_500 = True
+    await poll(hass, config_entry)
+    assert hass.states.get("sensor.office_scanner_panel_display").state == "unavailable"
+    assert hass.states.get("sensor.office_scanner_state").state == "idle"
+    container.device_status_500 = False
+    await poll(hass, config_entry)
+    assert hass.states.get("sensor.office_scanner_panel_display").state == "Scan:   drück"
+
+
+async def test_device_status_polling_can_be_switched_off(hass: HomeAssistant, config_entry, container: FakeContainer) -> None:
+    hass.config_entries.async_update_entry(config_entry, options={**config_entry.options, CONF_DEVICE_STATUS: False})
+    await setup_entry(hass, config_entry)
+    await poll(hass, config_entry)
+    assert not any(r[1] == "/api/scanner/device" for r in container.requests)
+    assert hass.states.get("sensor.office_scanner_panel_display").state == "unavailable"
+    assert hass.states.get("binary_sensor.office_scanner_scan_to_pc_registered").state == "unavailable"
+    assert hass.states.get("sensor.office_scanner_state").state == "idle"
+
+
+async def test_button_press_on_the_device_fires_an_event(hass: HomeAssistant, config_entry, container: FakeContainer) -> None:
+    await setup_entry(hass, config_entry)
+    pressed: list[Event] = []
+    hass.bus.async_listen(EVENT_BUTTON_PRESSED, pressed.append)
+    started: list[Event] = []
+    hass.bus.async_listen(EVENT_SCAN_STARTED, started.append)
+
+    # a scan started through the API: a scan-started event, no button event
+    container.jobs.insert(0, {"job": "2026-10-10-11-00-00", "state": "scanning", "action": "file", "trigger": "api"})
+    await poll(hass, config_entry)
+    assert len(started) == 1 and pressed == []
+    assert started[0].data["trigger"] == "api" and started[0].data["function"] == "file"
+
+    # the Scan-to-OCR button on the device, with what openskey reported
+    container.jobs.insert(0, {
+        "job": "2026-10-10-11-05-00", "state": "scanning", "action": "ocr", "trigger": "button",
+        "button": {"function": "ocr", "seq": 57, "regid": 60310, "params": {"p1": 0, "p2": 0, "p3": 0, "p4": 0}},
+    })
+    await poll(hass, config_entry)
+    assert len(started) == 2
+    assert [e.event_type for e in pressed] == [EVENT_BUTTON_PRESSED]
+    assert pressed[0].data["job"] == "2026-10-10-11-05-00"
+    assert pressed[0].data["function"] == "ocr"
+    assert pressed[0].data["trigger"] == "button"
+    assert pressed[0].data["button"]["seq"] == 57
+    assert pressed[0].data["device"] == "Office scanner"
+
+    # Brother's own daemon reports nothing but the trigger: the function falls back to the action
+    container.jobs.insert(0, {"job": "2026-10-10-11-10-00", "state": "scanning", "action": "file", "trigger": "button"})
+    await poll(hass, config_entry)
+    assert len(pressed) == 2
+    assert pressed[-1].data["function"] == "file" and pressed[-1].data["button"] is None
+
+    # a state change of the same job is not a new press
+    container.jobs[0]["state"] = "done"
+    await poll(hass, config_entry)
+    assert len(pressed) == 2

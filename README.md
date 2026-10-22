@@ -20,6 +20,9 @@ One device per container, with these entities:
 | OCR queue | sensor | Scans waiting for OCR; attributes: in progress, failed, holding |
 | Last job, Last error, Container version | diagnostic sensors | State of the newest job, its error text, the image version |
 | Scanning, Waiting for rear pages, OCR running, Scanner reachable, Problem | binary sensors | What the web UI shows with its icons |
+| Scan-to-PC registered | binary sensor | The scanner itself says it currently lists the container as a Scan-to-PC destination, i.e. its buttons reach us (container 2.2+, read over SNMP) |
+| Panel display | sensor | The first line of the scanner's own display; attributes: model, serial, firmware, whether network scanning and the scan key are supported and enabled (container 2.2+) |
+| Scan key enabled | diagnostic binary sensor | The device has its network Scan-to-PC key enabled (container 2.2+) |
 | One button per scan action | button | Named like the container's buttons (`RENAME_GUI_*`), disabled actions (`DISABLE_GUI_*`) are created disabled |
 | Scan rear pages | button | Only when the container's email action is disabled (that action is the web UI's rear-pages button); available while a scan waits for its rear pages |
 | Resolution, Mode, Source | select (config) | Options from the device (`scanimage -A` at container start); `Container default` leaves the container's setting in charge |
@@ -30,7 +33,9 @@ Services (all return response data):
 - `brother_scanner.scan_rear` with optional `job`
 - `brother_scanner.download_last_scan` with `path` (a file, or a directory with a trailing slash) and optional `ocr: true`; the path must be inside `allowlist_external_dirs`
 
-Events on the bus, each with job id, state, file names and download URLs: `brother_scanner_scan_started`, `brother_scanner_waiting_for_rear`, `brother_scanner_scan_done`, `brother_scanner_scan_failed`, `brother_scanner_ocr_done`.
+Events on the bus, each with job id, state, file names and download URLs: `brother_scanner_scan_started`, `brother_scanner_waiting_for_rear`, `brother_scanner_scan_done`, `brother_scanner_scan_failed`, `brother_scanner_ocr_done`. Every payload also says who started the job (`trigger`: `button` on the device or `api`) and which Scan-to-PC `function` it was.
+
+A press of a Scan-to-PC button **on the scanner itself** additionally fires `brother_scanner_button_pressed` (same payload; `function` is `file`, `ocr`, `email` or `image`, and `button` carries what the button daemon reported, such as the sequence number and the per-press fields, when the container runs [openskey](https://github.com/PhilippMundhenk/openskey)). Scans started from Home Assistant, the web UI or the API do not fire it. Needs container 2.2 or newer; older containers do not report the trigger.
 
 Downloads go through Home Assistant (`/api/brother_scanner/<entry>/download/<file>`), so the browser only needs to reach Home Assistant and the container's API token stays on the server.
 
@@ -61,7 +66,7 @@ Settings → Devices & services → Add integration → **Brother Scanner (Docke
 
 Setup asks for the address of the container's web interface: a host name or IP, or a full URL such as `https://scanner.example.org` or `http://192.168.1.5:8080`. The port may stay empty (80, or 443 with HTTPS). A `404 page not found` answer in the setup dialog comes from a reverse proxy in front of the container: the name or port does not reach the container's web interface, which must be at the root of the address.
 
-Options (gear icon on the integration): poll interval (default 5 s), a picture URL for the card, or hide the picture. Without a URL the card shows a generic illustration chosen by the model family (MFC/DCP, ADS, DS).
+Options (gear icon on the integration): poll interval (default 5 s), a picture URL for the card, or hide the picture, and whether to poll the scanner's own state (`GET /api/scanner/device`: registration, panel display, firmware; on by default, the container caches it so polling costs the device little). Without a URL the card shows a generic illustration chosen by the model family (MFC/DCP, ADS, DS). With a container older than 2.2 the device-state entities stay unavailable and everything else works.
 
 ## Automations
 
@@ -77,6 +82,20 @@ actions:
     data:
       path: /media/paperless/consume/
       ocr: true
+```
+
+React to a button on the scanner itself (for example, light up a lamp while the Scan-to-OCR shortcut is used):
+
+```yaml
+triggers:
+  - trigger: event
+    event_type: brother_scanner_button_pressed
+    event_data:
+      function: ocr
+actions:
+  - action: light.turn_on
+    target:
+      entity_id: light.office_desk
 ```
 
 Start a gray 300 dpi scan from a button on the wall and announce the result:

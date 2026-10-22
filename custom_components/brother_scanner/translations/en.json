@@ -38,7 +38,8 @@
         "data": {
           "scan_interval": "Poll interval (seconds)",
           "image_url": "Picture URL for the card (empty: generic illustration by model)",
-          "hide_image": "Hide the picture on the card"
+          "hide_image": "Hide the picture on the card",
+          "device_status": "Poll the scanner's own state (registration, panel display, firmware; container 2.2 or newer)"
         }
       }
     }
@@ -80,6 +81,9 @@
       },
       "version": {
         "name": "Container version"
+      },
+      "panel_display": {
+        "name": "Panel display"
       }
     },
     "binary_sensor": {
@@ -97,6 +101,12 @@
       },
       "problem": {
         "name": "Problem"
+      },
+      "registered": {
+        "name": "Scan-to-PC registered"
+      },
+      "scan_key_enabled": {
+        "name": "Scan key enabled"
       }
     },
     "button": {

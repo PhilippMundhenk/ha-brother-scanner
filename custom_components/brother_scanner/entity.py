@@ -24,12 +24,16 @@ class ScannerEntity(CoordinatorEntity[ScannerCoordinator]):
     def device_info(self) -> DeviceInfo:
         data = self.coordinator.data
         device = data.device if data else {}
+        # what the scanner itself reports (container 2.2+), when available
+        status = (data.device_status if data else None) or {}
         return DeviceInfo(
             identifiers={(DOMAIN, self.coordinator.entry.entry_id)},
             manufacturer=MANUFACTURER,
-            model=device.get("model") or "Scanner",
+            model=device.get("model") or status.get("model") or "Scanner",
             name=device.get("name") or self.coordinator.entry.title,
             sw_version=(data.actions.get("version") if data else None) or None,
+            hw_version=status.get("firmware") or None,
+            serial_number=status.get("serial") or None,
             configuration_url=self.coordinator.api.base_url,
         )
 
