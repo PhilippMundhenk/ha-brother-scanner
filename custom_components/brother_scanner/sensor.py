@@ -26,6 +26,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ScannerConfigEntry, asyn
             LastJobStateSensor(coordinator),
             LastErrorSensor(coordinator),
             VersionSensor(coordinator),
+            PanelDisplaySensor(coordinator),
         ]
     )
 
@@ -61,10 +62,16 @@ class ScannerStateSensor(ScannerEntity, SensorEntity):
                 for a in data.actions.get("actions", [])
             ],
             "capabilities": data.capabilities,
-            "model": data.device.get("model"),
+            "model": data.device.get("model") or (data.device_status or {}).get("model"),
             "image_url": self.image_url(),
             "web_ui_url": self.coordinator.api.base_url,
             "version": data.actions.get("version"),
+            # from the scanner itself (container 2.2+), None when not available
+            "registered": data.registered,
+            "serial": (data.device_status or {}).get("serial"),
+            "firmware": (data.device_status or {}).get("firmware"),
+            "display": (data.device_status or {}).get("display"),
+            "scan_key_enabled": (data.device_status or {}).get("scan_key_enabled"),
         }
 
 
@@ -194,6 +201,41 @@ class VersionSensor(ScannerEntity, SensorEntity):
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
         return {"api_version": self.coordinator.data.actions.get("api_version")}
+
+
+class PanelDisplaySensor(ScannerEntity, SensorEntity):
+    """The first line of the scanner's own display, read over SNMP (container 2.2+),
+    with the rest of the device status as attributes."""
+
+    _attr_icon = "mdi:monitor-small"
+
+    def __init__(self, coordinator: ScannerCoordinator) -> None:
+        super().__init__(coordinator, "panel_display")
+
+    @property
+    def available(self) -> bool:
+        return super().available and self.coordinator.data.device_status is not None
+
+    @property
+    def native_value(self) -> str | None:
+        display = (self.coordinator.data.device_status or {}).get("display")
+        return str(display)[:255] if display else None
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any]:
+        status = self.coordinator.data.device_status or {}
+        return {
+            "reachable": status.get("reachable"),
+            "registered": status.get("registered"),
+            "model": status.get("model"),
+            "serial": status.get("serial"),
+            "firmware": status.get("firmware"),
+            "net_scanner_supported": status.get("net_scanner_supported"),
+            "net_scanner_enabled": status.get("net_scanner_enabled"),
+            "scan_key_supported": status.get("scan_key_supported"),
+            "scan_key_enabled": status.get("scan_key_enabled"),
+            "checked": status.get("checked"),
+        }
 
 
 def _iso(timestamp: Any) -> str | None:

@@ -46,13 +46,17 @@ class ScannerApi:
         """Headers for a request: the token when one is configured."""
         return {"X-API-Token": self._token} if self._token else {}
 
-    async def _request(self, method: str, path: str, *, timeout: float | None = None, **kwargs: Any) -> Any:
+    async def _request(
+        self, method: str, path: str, *, timeout: float | None = None, not_found_ok: bool = False, **kwargs: Any
+    ) -> Any:
         url = f"{self.base_url}{path}"
         client_timeout = aiohttp.ClientTimeout(total=timeout) if timeout else self._timeout
         try:
             async with self._session.request(method, url, headers=self.headers, timeout=client_timeout, **kwargs) as res:
                 if res.status == 401:
                     raise ScannerAuthError("API token required or wrong")
+                if res.status == 404 and not_found_ok:
+                    return None
                 if res.status >= 400:
                     message = await _error_message(res)
                     raise ScannerApiError(f"{method} {path}: {res.status} {message}")
@@ -76,6 +80,12 @@ class ScannerApi:
     async def get_status(self) -> dict[str, Any]:
         """scan / waiting / ocr / reachable / queue."""
         return await self._request("GET", "/api/scanner/status")
+
+    async def get_device(self) -> dict[str, Any] | None:
+        """The scanner's own state read over SNMP (registered, model, serial, firmware,
+        panel display, scan-key capability), or None when the container does not offer
+        it: an image before 2.2, or DEVICE_STATUS=false."""
+        return await self._request("GET", "/api/scanner/device", not_found_ok=True)
 
     async def get_jobs(self, limit: int = 10) -> list[dict[str, Any]]:
         """Recent jobs, newest first."""

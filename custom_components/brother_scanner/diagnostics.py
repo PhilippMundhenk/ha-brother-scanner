@@ -23,6 +23,7 @@ async def async_get_config_entry_diagnostics(hass: HomeAssistant, entry: Scanner
         "status": data.status if data else None,
         "jobs": data.jobs if data else None,
         "newest_file": data.newest_file if data else None,
+        "device_status": data.device_status if data else None,
         "actions": data.actions if data else None,
         "selected": coordinator.selected,
     }

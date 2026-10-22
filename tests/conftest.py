@@ -53,6 +53,23 @@ JOB_DONE = {
 
 FILE_NEWEST = {"file": "2026-10-10-10-00-00.pdf", "size": 1234, "fileModificationTime": 1760090400}
 
+# GET /api/scanner/device (container 2.2+): what openskey reads from a real MFC-L2700DW
+DEVICE_STATUS = {
+    "device_ip": "192.0.2.10",
+    "reachable": True,
+    "registered": True,
+    "model": "MFC-L2700DW",
+    "serial": "E73941F6N621420",
+    "firmware": "Y2309112149",
+    "display": "Scan:   drück",
+    "net_scanner_supported": True,
+    "net_scanner_enabled": True,
+    "scan_key_supported": True,
+    "scan_key_enabled": True,
+    "checked": "2026-10-22T19:00:00+00:00",
+    "cached": False,
+}
+
 PDF = b"%PDF-1.4\n%fake\n%%EOF\n"
 
 
@@ -64,6 +81,9 @@ class FakeContainer:
         self.status: dict[str, Any] = copy.deepcopy(STATUS_IDLE)
         self.jobs: list[dict[str, Any]] = [copy.deepcopy(JOB_DONE)]
         self.files: list[dict[str, Any]] = [copy.deepcopy(FILE_NEWEST)]
+        self.device_status: dict[str, Any] = copy.deepcopy(DEVICE_STATUS)
+        self.device_status_404 = False  # an image before 2.2, or DEVICE_STATUS=false
+        self.device_status_500 = False  # the endpoint exists but could not read the device
         self.token: str | None = None
         self.requests: list[tuple[str, str, dict[str, Any]]] = []
         self.fail_status = False
@@ -101,6 +121,12 @@ class FakeContainer:
             return web.json_response(actions)
         if path == "/api/scanner/status":
             return web.json_response(self.status)
+        if path == "/api/scanner/device":
+            if self.device_status_404:
+                return web.json_response({"code": 404, "message": "Device status is disabled (DEVICE_STATUS=false)"}, status=404)
+            if self.device_status_500:
+                return web.json_response({"code": 500, "message": "openskey status gave no answer"}, status=500)
+            return web.json_response(self.device_status)
         if path == "/api/jobs":
             return web.json_response(self.jobs)
         if m := re.fullmatch(r"/api/jobs/([^/]+)/rear", path):

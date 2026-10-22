@@ -10,6 +10,8 @@ CONF_SSL = "ssl"
 CONF_SCAN_INTERVAL = "scan_interval"
 CONF_IMAGE_URL = "image_url"
 CONF_HIDE_IMAGE = "hide_image"
+# poll GET /api/scanner/device (the scanner's own state over SNMP; container 2.2+)
+CONF_DEVICE_STATUS = "device_status"
 
 DEFAULT_PORT = 80
 DEFAULT_SSL_PORT = 443
@@ -55,6 +57,9 @@ EVENT_SCAN_DONE = f"{DOMAIN}_scan_done"
 EVENT_SCAN_FAILED = f"{DOMAIN}_scan_failed"
 EVENT_OCR_DONE = f"{DOMAIN}_ocr_done"
 EVENT_WAITING_FOR_REAR = f"{DOMAIN}_waiting_for_rear"
+# a scan was started with a Scan-to-PC button on the device itself (job trigger "button");
+# the payload carries "function" and, when the daemon reports them, "button" (seq, params)
+EVENT_BUTTON_PRESSED = f"{DOMAIN}_button_pressed"
 
 SERVICE_SCAN = "scan"
 SERVICE_SCAN_REAR = "scan_rear"
