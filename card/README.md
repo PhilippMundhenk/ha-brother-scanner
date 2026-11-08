@@ -2,7 +2,7 @@
 
 The dashboard card of the [Brother Scanner (Docker)](../README.md#dashboard-card) integration. It ships with the integration: the build writes the bundle to `custom_components/brother_scanner/www/brother-scanner-card.js`, which the integration serves and registers as a dashboard resource. Configuration and screenshots are in the [main README](../README.md#dashboard-card).
 
-Until November 2026 the card was a separate HACS plugin, [brother-scanner-card](https://github.com/PhilippMundhenk/brother-scanner-card); its history continues here.
+Until November 2026 the card was a separate HACS plugin (`brother-scanner-card`); its history continues here.
 
 ## Development
 
