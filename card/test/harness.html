@@ -1,0 +1,92 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>brother-scanner-card harness</title>
+    <style>
+      body { font-family: system-ui, sans-serif; background: #fafafa; padding: 24px; max-width: 480px; }
+      ha-card { display: block; background: #fff; border-radius: 12px; box-shadow: 0 2px 6px rgba(0,0,0,.15); }
+      ha-icon { display: inline-block; width: 24px; height: 24px; }
+      ha-icon::after { content: attr(icon); font-size: 9px; color: #888; }
+    </style>
+    <script>
+      // Minimal stand-ins for the frontend elements the card renders into.
+      customElements.define('ha-card', class extends HTMLElement {});
+      customElements.define('ha-icon', class extends HTMLElement {});
+      customElements.define('ha-form', class extends HTMLElement {});
+    </script>
+    <script type="module" src="/dist/brother-scanner-card.js"></script>
+  </head>
+  <body>
+    <div id="mount"></div>
+    <script type="module">
+      // The harness exposes helpers so the Playwright test can drive the card
+      // with a fake hass object and inspect the service calls.
+      window.serviceCalls = [];
+      window.wsCalls = [];
+      window.makeHass = (overrides = {}) => {
+        const states = {
+          'sensor.office_state': {
+            entity_id: 'sensor.office_state', state: 'idle', last_changed: '', last_updated: '',
+            attributes: {
+              friendly_name: 'Office State', model: 'MFC-L2700DW', image_url: '/images/mfc.svg',
+              web_ui_url: 'http://scanner.local:8080', reachable: true,
+              // the scanner's own state (integration 1.1 with container 2.2+)
+              registered: true, serial: 'E73941F6N621420', firmware: 'Y2309112149', display: 'Scan:   drück', scan_key_enabled: true,
+              queue: { pending: 0, in_progress: 0, failed: 0, holding: false },
+              actions: [
+                { target: 'file', label: 'Archive', enabled: true },
+                { target: 'email', label: 'Rear pages', enabled: true },
+                { target: 'ocr', label: 'Scan to OCR', enabled: true },
+                { target: 'image', label: 'Scan to image', enabled: false },
+              ],
+            },
+          },
+          'sensor.office_last_scan': {
+            entity_id: 'sensor.office_last_scan', state: '2026-10-10-10-00-00.pdf', last_changed: '', last_updated: '',
+            attributes: { size: 345678, modified: '2026-10-10T10:00:00+00:00', download_url: '/api/brother_scanner/abc/download/2026-10-10-10-00-00.pdf', ocr_download_url: '/api/brother_scanner/abc/download/2026-10-10-10-00-00-ocr.pdf' },
+          },
+          'button.office_archive': { entity_id: 'button.office_archive', state: 'unknown', attributes: {}, last_changed: '', last_updated: '' },
+          'button.office_rear_pages': { entity_id: 'button.office_rear_pages', state: 'unknown', attributes: {}, last_changed: '', last_updated: '' },
+          'button.office_scan_to_ocr': { entity_id: 'button.office_scan_to_ocr', state: 'unknown', attributes: {}, last_changed: '', last_updated: '' },
+          'button.office_scan_rear_pages': { entity_id: 'button.office_scan_rear_pages', state: 'unavailable', attributes: {}, last_changed: '', last_updated: '' },
+          'select.office_resolution': { entity_id: 'select.office_resolution', state: 'default', attributes: { options: ['default', '100', '200', '300'] }, last_changed: '', last_updated: '' },
+        };
+        const entities = {
+          'sensor.office_state': { entity_id: 'sensor.office_state', device_id: 'dev1', translation_key: 'scanner_state', platform: 'brother_scanner' },
+          'sensor.office_last_scan': { entity_id: 'sensor.office_last_scan', device_id: 'dev1', translation_key: 'last_scan', platform: 'brother_scanner' },
+          'button.office_archive': { entity_id: 'button.office_archive', device_id: 'dev1', translation_key: 'scan_file', platform: 'brother_scanner' },
+          'button.office_rear_pages': { entity_id: 'button.office_rear_pages', device_id: 'dev1', translation_key: 'scan_email', platform: 'brother_scanner' },
+          'button.office_scan_to_ocr': { entity_id: 'button.office_scan_to_ocr', device_id: 'dev1', translation_key: 'scan_ocr', platform: 'brother_scanner' },
+          'button.office_scan_rear_pages': { entity_id: 'button.office_scan_rear_pages', device_id: 'dev1', translation_key: 'scan_rear', platform: 'brother_scanner' },
+          'select.office_resolution': { entity_id: 'select.office_resolution', device_id: 'dev1', translation_key: 'resolution', platform: 'brother_scanner' },
+        };
+        const hass = {
+          states, entities, language: 'en', locale: { language: 'en' },
+          callService: async (domain, service, data) => { window.serviceCalls.push({ domain, service, data }); },
+          callWS: async (message) => { window.wsCalls.push(message); return { path: message.path + '?authSig=signed' }; },
+          hassUrl: (path) => 'http://ha.local:8123' + path,
+        };
+        return Object.assign(hass, overrides);
+      };
+      window.mountCard = (config, hass) => {
+        const mount = document.getElementById('mount');
+        mount.innerHTML = '';
+        const card = document.createElement('brother-scanner-card');
+        card.setConfig(config);
+        card.hass = hass || window.makeHass();
+        mount.appendChild(card);
+        window.card = card;
+        return card;
+      };
+      window.setState = (entityId, state, attributes) => {
+        const hass = { ...window.card.hass, states: { ...window.card.hass.states } };
+        const old = hass.states[entityId];
+        hass.states[entityId] = { ...old, state: state ?? old.state, attributes: { ...old.attributes, ...(attributes || {}) } };
+        window.card.hass = hass;
+      };
+      window.open = (url) => { window.opened = url; return null; };
+      window.harnessReady = true;
+    </script>
+  </body>
+</html>
