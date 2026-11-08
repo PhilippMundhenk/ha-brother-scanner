@@ -43,7 +43,11 @@ jobs:
       - run: npm run lint
       - run: npm run build
       - name: Check the committed bundle is current
-        run: git diff --exit-code -- ../custom_components/brother_scanner/www/ || { echo "the card bundle is stale: run npm run build in card/ and commit"; exit 1; }
+        run: |
+          if ! git diff --exit-code -- ../custom_components/brother_scanner/www/; then
+            echo "The card bundle is stale. Run npm run build in card/ and commit the result."
+            exit 1
+          fi
       - run: npx playwright install --with-deps chromium
       - run: npx playwright test
 
