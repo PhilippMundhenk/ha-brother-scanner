@@ -1,5 +1,7 @@
 {
   "name": "Brother Scanner (Docker)",
   "render_readme": true,
+  "zip_release": true,
+  "filename": "brother_scanner.zip",
   "homeassistant": "2024.8.0"
 }

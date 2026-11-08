@@ -1,9 +1,10 @@
 name: Release
 
-# Publishing a GitHub release (tag vX.Y.Z) attaches a zip of the integration,
-# which HACS uses when "zip_release" is set. Here HACS downloads the
-# repository at the release tag directly, so the zip is a convenience for
-# manual installs. The job also checks that manifest.json carries the tag's
+# Publishing a GitHub release (tag vX.Y.Z) attaches brother_scanner.zip, the
+# content of custom_components/brother_scanner. hacs.json sets "zip_release",
+# so HACS installs from this one file instead of fetching every file of the
+# integration separately; a release without the zip cannot be installed
+# through HACS. The job also checks that manifest.json carries the tag's
 # version, which HACS shows to users.
 
 on:
