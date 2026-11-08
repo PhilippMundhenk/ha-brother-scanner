@@ -1,10 +1,11 @@
 // Tiny static server for the test harness (no extra dependency).
 import { createServer } from 'node:http';
 import { readFile } from 'node:fs/promises';
-import { extname, join, normalize } from 'node:path';
+import { extname, join, normalize, resolve } from 'node:path';
 
 const port = Number(process.argv[2] || 4873);
-const root = process.cwd();
+// the repository root: the harness loads the bundle from custom_components/
+const root = resolve(process.cwd(), '..');
 const types = { '.html': 'text/html', '.js': 'text/javascript', '.mjs': 'text/javascript', '.svg': 'image/svg+xml', '.css': 'text/css' };
 
 createServer(async (req, res) => {

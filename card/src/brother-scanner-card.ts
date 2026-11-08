@@ -4,7 +4,8 @@ import { discoverEntities } from './entities';
 import './brother-scanner-card-editor';
 import type { CardConfig, HassEntityState, HomeAssistant, ScannerAction, ScannerEntities } from './types';
 
-const CARD_VERSION = '1.1.1';
+// replaced at build time with the integration's version (manifest.json)
+const CARD_VERSION = '__CARD_VERSION__';
 
 const STATE_ICONS: Record<string, string> = {
   idle: 'mdi:emoticon-happy-outline',
@@ -540,15 +541,21 @@ export class BrotherScannerCard extends LitElement {
   `;
 }
 
-customElements.define('brother-scanner-card', BrotherScannerCard);
+// Defined once: a dashboard may still load the old standalone card (HACS
+// plugin brother-scanner-card) next to the copy the integration registers.
+if (!customElements.get('brother-scanner-card')) {
+  customElements.define('brother-scanner-card', BrotherScannerCard);
+}
 
 window.customCards = window.customCards || [];
-window.customCards.push({
-  type: 'brother-scanner-card',
-  name: 'Brother Scanner Card',
-  description: 'Scan buttons, status and the last scan of a BrotherScannerDocker container',
-  preview: true,
-  documentationURL: 'https://github.com/PhilippMundhenk/brother-scanner-card',
-});
+if (!window.customCards.some((card) => card.type === 'brother-scanner-card')) {
+  window.customCards.push({
+    type: 'brother-scanner-card',
+    name: 'Brother Scanner Card',
+    description: 'Scan buttons, status and the last scan of a BrotherScannerDocker container',
+    preview: true,
+    documentationURL: 'https://github.com/PhilippMundhenk/ha-brother-scanner#dashboard-card',
+  });
+}
 
 console.info(`%c BROTHER-SCANNER-CARD %c ${CARD_VERSION} `, 'color: white; background: #0ea5e9; font-weight: 700;', 'color: #0ea5e9; background: white; font-weight: 700;');

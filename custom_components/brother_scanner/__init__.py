@@ -16,6 +16,7 @@ from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from .api import ScannerApi, ScannerAuthError, ScannerCannotConnect
 from .const import CONF_SSL, CONF_TOKEN, DEFAULT_PORT, DOMAIN, STATIC_URL_BASE
 from .coordinator import ScannerCoordinator
+from .frontend import async_register_card, async_unregister_card
 from .http import ScannerDownloadView
 from .services import async_setup_services
 
@@ -36,6 +37,8 @@ async def async_setup(hass: HomeAssistant, config: dict) -> bool:
     await hass.http.async_register_static_paths(
         [StaticPathConfig(STATIC_URL_BASE, str(Path(__file__).parent / "images"), cache_headers=True)]
     )
+    # the dashboard card ships with the integration (frontend.py)
+    await async_register_card(hass)
     return True
 
 
@@ -68,6 +71,12 @@ async def async_setup_entry(hass: HomeAssistant, entry: ScannerConfigEntry) -> b
 async def _async_update_listener(hass: HomeAssistant, entry: ScannerConfigEntry) -> None:
     """Options changed (poll interval, image): reload."""
     await hass.config_entries.async_reload(entry.entry_id)
+
+
+async def async_remove_entry(hass: HomeAssistant, entry: ScannerConfigEntry) -> None:
+    """The last container is removed: take the card's dashboard resource with it."""
+    if not [other for other in hass.config_entries.async_entries(DOMAIN) if other.entry_id != entry.entry_id]:
+        await async_unregister_card(hass)
 
 
 async def async_unload_entry(hass: HomeAssistant, entry: ScannerConfigEntry) -> bool:

@@ -18,7 +18,7 @@ declare global {
 }
 
 async function mount(page: Page, config: Record<string, unknown> = { type: 'custom:brother-scanner-card', entity: 'sensor.office_state' }) {
-  await page.goto('/test/harness.html');
+  await page.goto('/card/test/harness.html');
   await page.waitForFunction(() => window.harnessReady && customElements.get('brother-scanner-card'));
   await page.evaluate((cfg) => window.mountCard(cfg), config);
   const card = page.locator('brother-scanner-card');
@@ -105,7 +105,7 @@ test('config options: hide picture, subset of buttons, selects, no last scan, no
 });
 
 test('missing entity and no scans yet are reported, config without entity is rejected', async ({ page }) => {
-  await page.goto('/test/harness.html');
+  await page.goto('/card/test/harness.html');
   await page.waitForFunction(() => window.harnessReady && customElements.get('brother-scanner-card'));
   const error = await page.evaluate(() => {
     try {
@@ -127,7 +127,7 @@ test('missing entity and no scans yet are reported, config without entity is rej
 });
 
 test('stub config picks the state sensor and the editor emits config-changed', async ({ page }) => {
-  await page.goto('/test/harness.html');
+  await page.goto('/card/test/harness.html');
   await page.waitForFunction(() => window.harnessReady && customElements.get('brother-scanner-card'));
   const stub = await page.evaluate(() => (customElements.get('brother-scanner-card') as any).getStubConfig(window.makeHass()));
   expect(stub).toEqual({ entity: 'sensor.office_state' });

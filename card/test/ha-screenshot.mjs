@@ -55,12 +55,11 @@ function ws(url, token) {
 }
 
 const token = await login();
-mkdirSync(`${configDir}/www`, { recursive: true });
-copyFileSync('dist/brother-scanner-card.js', `${configDir}/www/brother-scanner-card.js`);
 const api = await ws(base.replace('http', 'ws') + '/api/websocket', token.access_token);
+// The integration serves the card and registers it as a dashboard resource.
 const resources = await api.call({ type: 'lovelace/resources' });
-if (!resources.some((r) => r.url.includes('brother-scanner-card.js'))) {
-  await api.call({ type: 'lovelace/resources/create', res_type: 'module', url: '/local/brother-scanner-card.js?v=1' });
+if (!resources.some((r) => r.url.startsWith('/brother_scanner/card/brother-scanner-card.js'))) {
+  throw new Error('the integration has not registered the card; install the integration from this repository first');
 }
 const states = await api.call({ type: 'get_states' });
 const stateEntity = states.find((s) => s.entity_id.startsWith('sensor.') && s.attributes.actions && s.attributes.web_ui_url);

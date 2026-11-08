@@ -11,7 +11,7 @@ export default defineConfig({
   },
   webServer: {
     command: 'node test/serve.mjs 4873',
-    url: 'http://localhost:4873/test/harness.html',
+    url: 'http://localhost:4873/card/test/harness.html',
     reuseExistingServer: true,
     timeout: 30_000,
   },

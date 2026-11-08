@@ -116,4 +116,6 @@ export class BrotherScannerCardEditor extends LitElement {
   `;
 }
 
-customElements.define('brother-scanner-card-editor', BrotherScannerCardEditor);
+if (!customElements.get('brother-scanner-card-editor')) {
+  customElements.define('brother-scanner-card-editor', BrotherScannerCardEditor);
+}

@@ -1,9 +1,8 @@
 {
   "name": "brother-scanner-card",
-  "version": "1.1.1",
-  "description": "Home Assistant dashboard card for BrotherScannerDocker (ha-brother-scanner)",
+  "private": true,
+  "description": "Home Assistant dashboard card for BrotherScannerDocker, shipped with the ha-brother-scanner integration",
   "license": "MIT",
-  "repository": "github:PhilippMundhenk/brother-scanner-card",
   "type": "module",
   "scripts": {
     "build": "rollup -c",
