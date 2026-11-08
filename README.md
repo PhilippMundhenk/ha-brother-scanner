@@ -170,7 +170,7 @@ The card's sources are in `card/` (TypeScript and Lit). Its bundle is committed 
 
 The tests run a fake container (an aiohttp server speaking the container's API) and exercise the config flow, entities, services, events and the download view. For a test against the real thing, start the container's end-to-end image (`tests/e2e` in BrotherScannerDocker) and add it through the UI.
 
-A release tag `vX.Y.Z` must match `version` in `manifest.json`; the Release workflow checks it and attaches a zip of the integration.
+A release tag `vX.Y.Z` must match `version` in `manifest.json`; the Release workflow checks it and attaches `brother_scanner.zip`, which HACS installs from (`zip_release` in `hacs.json`).
 
 ## License
 
