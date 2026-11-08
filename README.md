@@ -76,8 +76,6 @@ How the card is loaded:
 - With dashboard resources in storage mode (the default), the integration adds one resource, `/brother_scanner/card/brother-scanner-card.js?v=<version>`, of type JavaScript module, and updates its version after each update of the integration so the browser fetches the new file. Removing the integration removes the resource.
 - With `lovelace: resource_mode: yaml`, where the resources are yours, the integration does not touch them and loads the card on every frontend page instead. Nothing to add by hand.
 
-**Coming from the separate card** (`brother-scanner-card`, installed as a HACS custom repository or by hand): the card is now part of this integration, and the separate repository has been removed. Remove the old card in HACS (Frontend → Brother Scanner Card → Remove) or delete its resource under Settings → Dashboards → Resources; the integration logs a warning while the old copy is still registered. Until then the card keeps working, but the browser console may show an error from the old copy. Your dashboards keep working unchanged, the card type stays `custom:brother-scanner-card`.
-
 ## Requirements
 
 - BrotherScannerDocker from October 2026 or newer (`GET /api/actions` answers with `api_version`), running with `WEBSERVER=true`
