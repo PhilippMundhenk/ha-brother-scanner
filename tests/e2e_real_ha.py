@@ -10,7 +10,8 @@ What it does:
   2. onboards Home Assistant through its API (user, token)
   3. adds the integration through the config flow API
   4. checks the entities, presses the scan button, waits for the job, downloads
-     the PDF through the integration's proxy view, and tears everything down
+     the PDF through the integration's proxy view, checks the dashboard card is
+     served and registered as a resource, and tears everything down
 """
 
 from __future__ import annotations
@@ -149,6 +150,19 @@ def main() -> int:
         pdf = request(f"{ha}{last['attributes']['download_url']}", token=token, raw=True)
         assert pdf.startswith(b"%PDF"), pdf[:20]
         print(f"downloaded {len(pdf)} bytes through Home Assistant")
+
+        # the dashboard card: served by the integration, registered as a resource
+        manifest = json.loads((ROOT / "custom_components" / "brother_scanner" / "manifest.json").read_text())
+        card_url = "/brother_scanner/card/brother-scanner-card.js"
+        card = request(f"{ha}{card_url}", raw=True)
+        assert f"BROTHER-SCANNER-CARD %c {manifest['version']} ".encode() in card, "card bundle not served"
+        # Home Assistant writes the resources a few seconds after the change
+        resources_file = config_dir / ".storage" / "lovelace_resources"
+        wait_for(lambda: resources_file.exists(), 30, "lovelace_resources written")
+        stored = json.loads(resources_file.read_text())
+        urls = [(item["type"], item["url"]) for item in stored["data"]["items"]]
+        assert urls == [("module", f"{card_url}?v={manifest['version']}")], urls
+        print(f"card served ({len(card)} bytes) and registered as {urls[0][1]}")
 
         # the service with response data
         res = request(f"{ha}/api/services/brother_scanner/scan?return_response", "POST", {"target": "file", "resolution": 100}, token)

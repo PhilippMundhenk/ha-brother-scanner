@@ -84,3 +84,8 @@ IMAGE_FAMILIES = {
 IMAGE_GENERIC = "generic.svg"
 STATIC_URL_BASE = f"/{DOMAIN}/static"
 DOWNLOAD_URL_BASE = f"/api/{DOMAIN}"
+
+# The dashboard card, built from card/ into www/ and served by the integration
+CARD_FILENAME = "brother-scanner-card.js"
+CARD_URL_BASE = f"/{DOMAIN}/card"
+CARD_URL = f"{CARD_URL_BASE}/{CARD_FILENAME}"

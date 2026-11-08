@@ -26,6 +26,31 @@ jobs:
         with:
           category: integration
 
+  card:
+    name: dashboard card (lint, build, bundle current, Playwright)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: card
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: card/package-lock.json
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run build
+      - name: Check the committed bundle is current
+        run: |
+          if ! git diff --exit-code -- ../custom_components/brother_scanner/www/; then
+            echo "The card bundle is stale. Run npm run build in card/ and commit the result."
+            exit 1
+          fi
+      - run: npx playwright install --with-deps chromium
+      - run: npx playwright test
+
   tests:
     name: pytest
     runs-on: ubuntu-latest

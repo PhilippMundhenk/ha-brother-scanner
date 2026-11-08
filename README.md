@@ -5,7 +5,7 @@
 
 A Home Assistant integration for [BrotherScannerDocker](https://github.com/PhilippMundhenk/BrotherScannerDocker): the container that drives a network Brother scanner and turns scans into PDFs, with optional OCR. The integration talks to the container's REST API, so Home Assistant can start scans, show what the scanner is doing and hand out the finished PDFs.
 
-A matching dashboard card lives in [brother-scanner-card](https://github.com/PhilippMundhenk/brother-scanner-card).
+A [dashboard card](#dashboard-card) comes with the integration: it is served and registered as a dashboard resource by the integration, nothing to install separately.
 
 This is an independent, third-party project. It is not affiliated with or endorsed by Brother Industries, Ltd.; Brother is a trademark of Brother Industries, Ltd. and is used only to describe which devices the container works with. No Brother logo or artwork is included.
 
@@ -38,6 +38,45 @@ Events on the bus, each with job id, state, file names and download URLs: `broth
 A press of a Scan-to-PC button **on the scanner itself** additionally fires `brother_scanner_button_pressed` (same payload; `function` is `file`, `ocr`, `email` or `image`, and `button` carries what the button daemon reported, such as the sequence number and the per-press fields, when the container runs [openskey](https://github.com/PhilippMundhenk/openskey)). Scans started from Home Assistant, the web UI or the API do not fire it. Needs container 2.2 or newer; older containers do not report the trigger.
 
 Downloads go through Home Assistant (`/api/brother_scanner/<entry>/download/<file>`), so the browser only needs to reach Home Assistant and the container's API token stays on the server.
+
+## Dashboard card
+
+The integration comes with a dashboard card. It is served by the integration and registered as a dashboard resource when the integration starts, so there is nothing else to install: after installing or updating the integration and restarting Home Assistant, reload the browser and add the card (Edit dashboard → Add card → **Brother Scanner Card**).
+
+The card shows the scanner (a picture, the name and the state with the same icons as the container's web UI), the scan buttons with the labels configured in the container, a highlighted button while a scan waits for its rear pages (with the countdown), the OCR queue, the last scan with download buttons for the PDF and its OCR copy, and a link to the web UI. With container 2.2 or newer it also shows what the scanner itself reports: whether it currently lists the container as a Scan-to-PC destination (so the buttons on the device work), its panel display line, and on request serial number and firmware; every one of these can be switched off.
+
+![The card in a Home Assistant dashboard](card/doc/card.png)
+
+The visual editor covers every option. In YAML:
+
+```yaml
+type: custom:brother-scanner-card
+entity: sensor.office_scanner_state   # the integration's "State" sensor
+name: Office scanner                  # optional, default: the device name
+show_image: true                      # picture from the integration (generic by model, or the configured URL)
+image: /local/my-scanner.png          # optional, overrides the picture
+show_buttons: true
+buttons: [file, ocr]                  # optional: only these actions (file, ocr, email, image)
+show_selects: false                   # resolution / mode / source dropdowns
+show_last_scan: true
+show_link: true                       # link to the container's web UI
+compact: false
+show_device: true                     # the scanner's own state (container 2.2+); each value below can be switched off
+show_registered: true                 #   "Scan-to-PC registered" (the scanner lists the container; red when it does not)
+show_display: true                    #   the scanner's panel display line
+show_serial: false                    #   serial number
+show_firmware: false                  #   firmware version
+show_scan_key: true                   #   warn when the device has its network scan key switched off
+```
+
+The card finds the other entities of the scanner (buttons, selects, last scan) through the device of the state sensor, so only the state sensor needs to be configured. Disabled actions (`DISABLE_GUI_*` in the container) do not get a button; renamed actions (`RENAME_GUI_*`) show their label. Downloads go through the integration's authenticated download endpoint (the card asks for a signed URL first), so they work from outside the local network as well and the container's API token never reaches the browser.
+
+How the card is loaded:
+
+- With dashboard resources in storage mode (the default), the integration adds one resource, `/brother_scanner/card/brother-scanner-card.js?v=<version>`, of type JavaScript module, and updates its version after each update of the integration so the browser fetches the new file. Removing the integration removes the resource.
+- With `lovelace: resource_mode: yaml`, where the resources are yours, the integration does not touch them and loads the card on every frontend page instead. Nothing to add by hand.
+
+**Coming from the separate card** (`brother-scanner-card`, installed as a HACS custom repository or by hand): the card is now part of this integration, and the separate repository has been removed. Remove the old card in HACS (Frontend → Brother Scanner Card → Remove) or delete its resource under Settings → Dashboards → Resources; the integration logs a warning while the old copy is still registered. Until then the card keeps working, but the browser console may show an error from the old copy. Your dashboards keep working unchanged, the card type stays `custom:brother-scanner-card`.
 
 ## Requirements
 
@@ -122,7 +161,14 @@ The container's API also works with Home Assistant's built-in `rest` sensor and 
 ```sh
 pip install -r requirements_test.txt
 pytest
+
+cd card
+npm install
+npm run build        # builds custom_components/brother_scanner/www/brother-scanner-card.js
+npm test             # builds, then Playwright tests against a harness with a fake hass object
 ```
+
+The card's sources are in `card/` (TypeScript and Lit). Its bundle is committed in `custom_components/brother_scanner/www/`, because Home Assistant serves it from there; CI rebuilds it and fails when the committed bundle is not current. The card carries the integration's version from `manifest.json`, so one version covers both.
 
 The tests run a fake container (an aiohttp server speaking the container's API) and exercise the config flow, entities, services, events and the download view. For a test against the real thing, start the container's end-to-end image (`tests/e2e` in BrotherScannerDocker) and add it through the UI.
 
